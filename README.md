@@ -1,5 +1,7 @@
 # 每日居家運動 APP
 
+線上版：https://chengyinwang.github.io/homefit/ （iPhone 用 Safari 打開 →「分享」→「加入主畫面」）
+
 自己用的居家徒手運動網頁 APP（PWA），可以加入 iPhone 主畫面，用起來就像一般的 APP。
 
 ## 功能
