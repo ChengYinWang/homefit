@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-Hant-TW"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>動作圖庫（開發用）</title>
+<link rel="stylesheet" href="../css/style.css">
+<style>body{padding:12px}.g{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.g div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:4px;font-size:12px;text-align:center}.g svg{width:100%;height:auto;display:block;border-bottom:1px dashed var(--line)}</style>
+</head><body><div class="g" id="g"></div>
+<script type="module">
+import { ANIM, animateFigure, figureFrame } from '../js/figure.js';
+import { EXERCISES } from '../js/exercises.js';
+const params = new URLSearchParams(location.search);
+const still = params.has('still');
+const only = params.get('only');
+const g = document.getElementById('g');
+const ids = [...new Set([...EXERCISES.map(e => e.id), ...Object.keys(ANIM)])].filter(id => !only || only.split(',').includes(id));
+for (const id of ids) {
+  const ex = EXERCISES.find(e => e.id === id);
+  const d = document.createElement('div');
+  d.innerHTML = `<div class="f"></div>${ex ? ex.name : '(無資料)'}<br><small>${id}${ANIM[id] ? '' : ' ⚠️無動畫'}</small>`;
+  g.appendChild(d);
+  if (!ANIM[id]) continue;
+  if (still) d.querySelector('.f').innerHTML = ANIM[id].frames.map((_, i) => figureFrame(id, i)).join('');
+  else animateFigure(d.querySelector('.f'), id);
+}
+</script></body></html>

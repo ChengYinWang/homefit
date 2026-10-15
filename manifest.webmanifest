@@ -1,0 +1,17 @@
+{
+  "name": "每日居家運動",
+  "short_name": "居家運動",
+  "description": "每天居家徒手運動、連勝紀錄與熱量追蹤",
+  "lang": "zh-Hant-TW",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fff8f3",
+  "theme_color": "#ff6b2c",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -1,0 +1,8 @@
+# 開發過程的截圖與暫存檔
+dev/*.png
+dev/frames.json
+# 改版前動畫備份（本機保留即可）
+動作動畫/原版動畫備份.zip
+# 本機設定
+.claude/
+node_modules/
