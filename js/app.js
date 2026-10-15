@@ -7,6 +7,7 @@ import {
   applyFreezes, currentStreak, bestStreak, awardFreeze, nextMilestone, dayStatus,
   MILESTONES, MAX_FREEZES, bmr, kcalOn,
 } from './streak.js';
+import { pushStatus, enablePush, disablePush, syncPush, sendTestPush } from './push.js';
 
 let state = load();
 let view = state.profile ? 'home' : 'onboarding';
@@ -48,6 +49,22 @@ function go(v) {
   view = v;
   render();
   window.scrollTo(0, 0);
+}
+
+// ---------- 每日推播提醒 ----------
+function reminder() {
+  return { enabled: false, time: '20:00', late: '22:00', ...state.settings.reminder };
+}
+
+function reminderInfo() {
+  const r = reminder();
+  const counted = state.history.filter(h => h.counted !== false).map(h => h.date).sort();
+  return { time: r.time, late: r.late, streak: currentStreak(state), doneDate: counted.at(-1) || null };
+}
+
+function syncReminder() {
+  if (!reminder().enabled) return;
+  syncPush(reminderInfo()).catch(e => console.warn('提醒同步失敗', e));
 }
 
 function ensurePlan() {
@@ -461,6 +478,7 @@ function finishWorkout(early) {
   const freezeAwarded = counted && awardFreeze(state);
   freezeMsg = 0;
   commit();
+  syncReminder();
   lastResult = { entry, before, after, freezeAwarded, milestone: after > before && MILESTONES.includes(after) ? after : null };
   if (counted) say(after > before ? `太棒了！連勝 ${after} 天` : '太棒了，今天也完成了');
   go('summary');
@@ -637,10 +655,7 @@ function settings() {
     <label class="switch"><span>🔊 嗶聲倒數</span><input type="checkbox" data-setting="sound" ${state.settings.sound ? 'checked' : ''}></label>
     <label class="switch"><span>🗣 語音報動作名稱</span><input type="checkbox" data-setting="voice" ${state.settings.voice ? 'checked' : ''}></label>
   </section>
-  <section class="card">
-    <h2>每日提醒</h2>
-    <p class="muted small" style="margin:0">推播提醒需要先把 APP 放上網並加入 iPhone 主畫面，下一階段會設定。</p>
-  </section>
+  <section class="card">${reminderCard()}</section>
   <section class="card">
     <h2>資料備份</h2>
     <p class="muted small" style="margin:0 0 10px">資料只存在這台裝置上。換手機前記得先匯出備份。</p>
@@ -651,6 +666,27 @@ function settings() {
     <button class="btn danger block" data-action="reset-all">清除所有資料</button>
   </section>
   <p class="muted small center">熱量為依 MET 公式的估算值。運動中若感到疼痛、頭暈或胸悶，請立即停止。</p>`;
+}
+
+function reminderCard() {
+  const r = reminder();
+  const status = pushStatus();
+  const head = '<h2>🔔 每日提醒</h2>';
+  const msg = {
+    'not-configured': '推播伺服器還沒設定好。',
+    'need-install': 'iPhone 要先把 APP 加入主畫面才能收到通知：用 Safari 打開本頁 →「分享」→「加入主畫面」，再從主畫面的圖示打開，回到這裡開啟提醒。',
+    unsupported: '這個瀏覽器不支援推播通知。',
+    denied: '通知權限已被關閉。請到 iPhone「設定」→「通知」→「居家運動」開啟允許通知，再回來這裡。',
+  }[status];
+  if (msg) return `${head}<p class="muted small" style="margin:0">${msg}</p>`;
+  return `${head}
+    <label class="switch"><span>提醒時間</span><input type="time" id="rem-time" value="${r.time}" step="900"></label>
+    <label class="switch"><span>還沒運動的話，晚上再提醒一次</span><input type="checkbox" id="rem-late-on" ${r.late ? 'checked' : ''}></label>
+    ${r.late ? `<label class="switch"><span>第二次提醒時間</span><input type="time" id="rem-late" value="${r.late}" step="900"></label>` : ''}
+    <p class="muted small" style="margin:6px 0 12px">當天運動完成後就不會再提醒。提醒約有 15 分鐘內的誤差。</p>
+    ${r.enabled
+      ? '<div class="row"><button class="btn grow" data-action="push-test">傳送測試通知</button><button class="btn ghost grow" data-action="push-off">關閉提醒</button></div>'
+      : '<button class="btn primary block" data-action="push-on">開啟每日提醒</button>'}`;
 }
 
 async function exportData() {
@@ -749,6 +785,19 @@ app.addEventListener('click', e => {
         state.plan = null; commit(); render(); toast('已重設');
       }
       break;
+    case 'push-on':
+      el.disabled = true;
+      enablePush(reminderInfo())
+        .then(() => { state.settings.reminder = { ...reminder(), enabled: true }; commit(); toast('已開啟每日提醒 🔔'); })
+        .catch(e => toast(e.message === 'denied' ? '通知權限被拒絕了' : e.message === 'dismissed' ? '需要允許通知才能提醒你' : '開啟失敗，請稍後再試'))
+        .finally(() => render());
+      break;
+    case 'push-off':
+      disablePush().finally(() => { state.settings.reminder = { ...reminder(), enabled: false }; commit(); render(); toast('已關閉提醒'); });
+      break;
+    case 'push-test':
+      sendTestPush().then(r => toast(r.ok ? '已送出，幾秒內會收到通知' : '送出失敗，請稍後再試')).catch(e => toast(e.message === 'too soon' ? '請稍等 30 秒再試' : '送出失敗，請稍後再試'));
+      break;
     case 'export': exportData(); break;
     case 'import': document.getElementById('import-file').click(); break;
     case 'reset-all':
@@ -772,6 +821,17 @@ app.addEventListener('change', e => {
     commit();
   }
   if (t.id === 'import-file' && t.files[0]) importData(t.files[0]);
+  if (['rem-time', 'rem-late', 'rem-late-on'].includes(t.id)) {
+    const r = reminder();
+    if (t.id === 'rem-time' && t.value) r.time = t.value;
+    if (t.id === 'rem-late' && t.value) r.late = t.value;
+    if (t.id === 'rem-late-on') r.late = t.checked ? '22:00' : null;
+    if (r.late && r.late <= r.time) r.late = null; // 第二次提醒要晚於第一次
+    state.settings.reminder = r;
+    commit();
+    syncReminder();
+    if (t.id === 'rem-late-on') render();
+  }
   if (t.name === 'rpe') {
     const labels = JSON.parse(document.getElementById('rpe-labels').textContent);
     const v = Number(t.value);
@@ -791,9 +851,11 @@ if (state.profile) {
   commit();
 }
 render();
+syncReminder();
 
 // 每天第一次打開或從背景回來時，日期可能已經換了
 document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') syncReminder();
   if (document.visibilityState === 'visible' && state.profile && view === 'home') {
     freezeMsg = applyFreezes(state) || freezeMsg;
     commit();

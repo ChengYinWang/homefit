@@ -1,0 +1,17 @@
+name = "homefit-push"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+# 每 15 分鐘檢查一次是否該發提醒
+[triggers]
+crons = ["*/15 * * * *"]
+
+[vars]
+ALLOWED_ORIGINS = "https://chengyinwang.github.io,http://localhost:8123,http://127.0.0.1:8123"
+VAPID_SUBJECT = "https://chengyinwang.github.io/homefit/"
+VAPID_PUBLIC_KEY = "BNZNfxlzFw0FOcucPWKh2xZWcH-01i8e3XnAKGN_6w5Vu8lcUq67uPa0sl21uR9Thc0ZSkMcs3BnbLKYFIiZJDM"
+
+# 用 `npx wrangler kv namespace create SUBS` 建立後填入 id
+[[kv_namespaces]]
+binding = "SUBS"
+id = "63789b93eeff427e8d00e9c24290142f"

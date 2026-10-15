@@ -6,3 +6,5 @@ dev/frames.json
 # 本機設定
 .claude/
 node_modules/
+worker/.wrangler/
+worker/node_modules/
