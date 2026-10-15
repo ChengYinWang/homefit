@@ -48,7 +48,7 @@ python dev/server.py
 | `dev/gallery.html` | 開發用：一次預覽所有動作動畫（http://localhost:8123/dev/gallery.html） |
 | `sw.js` | 離線快取：**每次修改程式後，把裡面的 `VERSION` 改成新的值**，手機才會抓到新版 |
 
-## 下一步（尚未完成）
+## 每日推播提醒
 
-1. 用 GitHub Pages 免費部署上網，再從 iPhone 的 Safari「加入主畫面」。
-2. 用 Cloudflare Workers（免費）做每日推播提醒，今天還沒運動的話晚上再提醒一次。
+設定頁 →「🔔 每日提醒」開啟。推播伺服器在 `worker/`（Cloudflare Workers 免費方案），改完後在該資料夾執行 `npx wrangler deploy`。
+
